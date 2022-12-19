@@ -63,14 +63,14 @@ internal static class Program {
         var bytes = Encoding.ASCII.GetBytes(args.FirstOrDefault() ?? "Hello, buttplug!");
         foreach (var @byte in bytes) {
             // Loop through each bit in the byte
-            for (var i = 1; i < 0x100; i <<= 1) {
+            for (var i = 7; i >= 0; i--) {
                 if (!device.IsConnected) {
                     Log.Error("Device disconnected! Exiting...");
                     return;
                 }
 
                 // If the bit is set, vibrate the device at 33% intensity.
-                await device.Scalar(ButtplugDeviceActuatorType.Vibrate, (@byte & i) is not 0 ? 0.33f : 0).ConfigureAwait(true);
+                await device.Scalar(ButtplugDeviceActuatorType.Vibrate, (@byte & (1 << i)) is not 0 ? 0.33f : 0).ConfigureAwait(true);
 
                 // wait for 300ms
                 await Task.Delay(300, cts.Token).ConfigureAwait(true);
