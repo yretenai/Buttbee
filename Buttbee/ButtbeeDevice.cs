@@ -51,7 +51,7 @@ public class ButtbeeDevice {
     public ButtplugDeviceAdded RawDevice { get; }
     protected ILogger Logger { get; }
 
-    public async Task<ButtplugError?> Send<T>(T message, string? name = null) where T : ButtplugMessage => (await Send<ButtplugOk, T>(message, name)).Error;
+    public async Task<ButtplugError?> Send<T>(T message, string? name = null) where T : ButtplugMessage => (await Send<ButtplugOk, T>(message, name).ConfigureAwait(false)).Error;
 
     public async Task<(TRx? Message, ButtplugError? Error, ButtbeeMessageEventArgs RawMessage)> Send<TRx, TTx>(TTx message, string? name = null) where TRx : ButtplugMessage where TTx : ButtplugMessage {
         if (!IsConnected) {

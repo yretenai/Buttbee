@@ -49,7 +49,7 @@ internal static class Program {
             };
 
             await client.StartScanning().ConfigureAwait(true);
-            await tcs.Task;
+            await tcs.Task.ConfigureAwait(true);
         }
 
         // Get the first device that can vibrate

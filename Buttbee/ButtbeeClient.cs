@@ -117,7 +117,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
             TimeSpan.FromSeconds(Math.Max(10, ServerInfo.MaxPingTime / 4)));
     }
 
-    public async Task<ButtplugError?> Send<T>(T message, string? name = null) where T : ButtplugMessage => (await Send<ButtplugOk, T>(message, name)).Error;
+    public async Task<ButtplugError?> Send<T>(T message, string? name = null) where T : ButtplugMessage => (await Send<ButtplugOk, T>(message, name).ConfigureAwait(false)).Error;
 
     public async Task<(TRx? Message, ButtplugError? Error, ButtbeeMessageEventArgs rawMessage)> Send<TRx, TTx>(TTx message, string? name = null) where TRx : ButtplugMessage where TTx : ButtplugMessage {
         lock (IdLock) {
@@ -313,7 +313,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
         Logger.Information("Closing connection to {Host}", Host);
 
         if (RxThread is not null) {
-            await StopDevices();
+            await StopDevices().ConfigureAwait(false);
         }
 
         if (PingTimer is not null) {
