@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -15,7 +16,7 @@ internal static class Program {
         // Create a new client, set up a cancellation token so we can control the lifetime of the client
         using var cts = new CancellationTokenSource();
 #pragma warning disable CA2000 // Dispose objects before losing scope, buggy: https://github.com/dotnet/roslyn-analyzers/issues/5712
-        var client = new ButtbeeClient("localhost") { Name = "Buttbee Binary Code Example" };
+        var client = new ButtbeeClient("localhost", logger: new SerilogWrapper(Log.Logger)) { Name = "Buttbee Binary Code Example" };
 #pragma warning restore CA2000
         await using var _ = client.ConfigureAwait(true);
 
@@ -79,5 +80,47 @@ internal static class Program {
 
         // Stop all devices.
         await device.Stop().ConfigureAwait(true);
+    }
+}
+
+[SuppressMessage("ReSharper", "TemplateIsNotCompileTimeConstantProblem")]
+internal class SerilogWrapper : IButtbeeLogger {
+    internal SerilogWrapper(ILogger logger) {
+        Logger = logger;
+    }
+
+    private ILogger Logger { get; }
+
+    public void Verbose(string message, params object?[] values) {
+        Logger.Debug(message, values);
+    }
+
+    public void Info(string message, params object?[] values) {
+        Logger.Debug(message, values);
+    }
+
+    public void Warn(string message, params object?[] values) {
+        Logger.Debug(message, values);
+    }
+
+    public void Error(string message, params object?[] values) {
+        Logger.Debug(message, values);
+    }
+
+    public void Critical(string message, params object?[] values) {
+        Logger.Debug(message, values);
+    }
+
+    public void Critical(Exception e, string message, params object?[] values) {
+        Logger.Debug(e, message, values);
+    }
+
+    public IButtbeeLogger AddContext(string key, string? value) {
+        return new SerilogWrapper(Logger.ForContext(key, value));
+    }
+
+    public IButtbeeLogger AddContext<T>() {
+        // ReSharper disable once ContextualLoggerProblem
+        return new SerilogWrapper(Logger.ForContext<T>());
     }
 }

@@ -10,20 +10,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using Buttbee.Events;
 using Buttbee.Messages;
-using Serilog;
 
 namespace Buttbee;
 
 public class ButtbeeClient : IDisposable, IAsyncDisposable {
     private readonly object IdLock = new();
 
-    public ButtbeeClient(string host, ushort port = 12345) {
+    public ButtbeeClient(string host, ushort port = 12345, IButtbeeLogger? logger = null) {
         WebSocket = new ClientWebSocket();
         Host = new Uri($"ws://{host}:{port}");
-        Logger = Log.ForContext<ButtbeeClient>();
+        Logger = logger?.AddContext<ButtbeeClient>();
     }
 
-    protected ILogger Logger { get; }
+    protected IButtbeeLogger? Logger { get; }
     public bool Debug { get; set; }
 
     public string Name { get; init; } = "Buttbee.Client";
@@ -54,16 +53,16 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
 
     public async Task Connect(CancellationToken token = default) {
         if (CancellationTokenSource is not null || RxThread is not null) {
-            Logger.Warning("Already connected");
+            Logger?.Warn("Already connected");
             return;
         }
 
         if (WebSocket.State is not WebSocketState.None) {
-            Logger.Warning("WebSocket is not in a valid state");
+            Logger?.Warn("WebSocket is not in a valid state");
             return;
         }
 
-        Logger.Information("Connecting to {Host}", Host);
+        Logger?.Info("Connecting to {Host}", Host);
         await WebSocket.ConnectAsync(Host, token).ConfigureAwait(false);
 
         CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -77,13 +76,13 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
 
         var (msg, err, _) = await Send<ButtplugServerInfo, ButtplugRequestServerInfo>(new ButtplugRequestServerInfo { ClientName = $"Buttbee/0.1; {Name}" }).ConfigureAwait(false);
         if (err is not null) {
-            Logger.Fatal("Failed to get server info: {Error}", err.ErrorMessage);
+            Logger?.Critical("Failed to get server info: {Error}", err.ErrorMessage);
             await Close().ConfigureAwait(false);
             return;
         }
 
         ServerInfo = msg!;
-        Logger.Information("Connected to {ServerName} Message Version {ServerVersion}", ServerInfo.ServerName, ServerInfo.MessageVersion);
+        Logger?.Info("Connected to {ServerName} Message Version {ServerVersion}", ServerInfo.ServerName, ServerInfo.MessageVersion);
 
         StartPing();
 
@@ -96,19 +95,19 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
         }
 
         if (ServerInfo is null) {
-            Logger.Error("Tried to start ping timer without server info");
+            Logger?.Error("Tried to start ping timer without server info");
             return;
         }
 
         if (ServerInfo.MaxPingTime is 0) {
-            Logger.Warning("Server does not support pings!");
+            Logger?.Warn("Server does not support pings!");
             return;
         }
 
         PingTimer = new Timer(_ => {
                 var err = Send(new ButtplugPing()).Result;
                 if (err is not null) {
-                    Logger.Fatal("Ping failed: {Error}", err.ErrorMessage);
+                    Logger?.Critical("Ping failed: {Error}", err.ErrorMessage);
                     DisposeAsync().AsTask().Wait(CancellationTokenSource!.Token);
                 }
             },
@@ -154,7 +153,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
         var doc = new JsonArray { new JsonObject { { name, msg } } };
 
         if (Debug) {
-            Logger.Debug("Sending message {Name} with data {Data}", name, msg.ToJsonString());
+            Logger?.Verbose("Sending message {Name} with data {Data}", name, msg.ToJsonString());
         }
 
         var buffer = Encoding.UTF8.GetBytes(doc.ToString());
@@ -164,7 +163,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
     }
 
     private void Rx() {
-        Logger.Information("Starting Rx thread");
+        Logger?.Info("Starting Rx thread");
         var buffer = ArrayPool<byte>.Shared.Rent(0x1000);
         var segment = new Memory<byte>(buffer);
 
@@ -214,7 +213,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
                             var evt = new ButtbeeMessageEventArgs(name, messageObject.Value);
 
                             if (Debug) {
-                                Logger.Debug("Received message {Name} with data {Data}", name, messageObject.Value.ToString());
+                                Logger?.Verbose("Received message {Name} with data {Data}", name, messageObject.Value.ToString());
                             }
 
                             ReceiveMessage?.Invoke(this, new ButtbeeMessageEventArgs(name, messageObject.Value));
@@ -231,12 +230,12 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
                         }
                     }
                 } catch (JsonException e) {
-                    Logger.Fatal(e, "Failed to parse json");
+                    Logger?.Critical(e, "Failed to parse json");
                 }
             }
         } catch (Exception e) {
             if (e is not TaskCanceledException && e.InnerException is not TaskCanceledException && !(e is AggregateException agg && agg.InnerExceptions.OfType<TaskCanceledException>().Any())) {
-                Logger.Fatal("Failed to receive message: {Message}", e.Message);
+                Logger?.Critical("Failed to receive message: {Message}", e.Message);
                 Close().Wait();
                 throw;
             }
@@ -244,7 +243,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
             ArrayPool<byte>.Shared.Return(buffer);
         }
 
-        Logger.Warning("Exiting Rx thread");
+        Logger?.Warn("Exiting Rx thread");
     }
 
     protected virtual void RxEvent(string name, JsonProperty messageObject) {
@@ -253,42 +252,42 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
             case "DeviceAdded": {
                 var rawDevice = messageObject.Value.Deserialize<ButtplugDeviceAdded>();
                 if (rawDevice is null) {
-                    Logger.Fatal("Failed to parse device added message");
+                    Logger?.Critical("Failed to parse device added message");
                     return;
                 }
 
-                var device = new ButtbeeDevice(rawDevice, this);
+                var device = new ButtbeeDevice(rawDevice, this, Logger);
                 Devices[device.Id] = device;
-                Logger.Information("Device \"{Name}\" connencted", device.DisplayName);
+                Logger?.Info("Device \"{Name}\" connencted", device.DisplayName);
                 DeviceAdded?.Invoke(this, new ButtbeeDeviceEventArgs(device));
                 return;
             }
             case "DeviceRemoved": {
                 var rawDevice = messageObject.Value.Deserialize<ButtplugDeviceRemoved>();
                 if (rawDevice is null) {
-                    Logger.Fatal("Failed to parse device added message");
+                    Logger?.Critical("Failed to parse device added message");
                     return;
                 }
 
                 if (!Devices.TryRemove(rawDevice.DeviceIndex, out var device)) {
-                    Logger.Warning("Failed to cleanup device {Id}", rawDevice.DeviceIndex);
+                    Logger?.Warn("Failed to cleanup device {Id}", rawDevice.DeviceIndex);
                     return;
                 }
 
-                Logger.Information("Device \"{Name}\" disconnected", device.DisplayName);
+                Logger?.Info("Device \"{Name}\" disconnected", device.DisplayName);
 
                 device.IsConnected = false;
                 DeviceRemoved?.Invoke(this, new ButtbeeDeviceEventArgs(device));
                 return;
             }
             case "ScanningFinished":
-                Logger.Information("Scanning finished");
+                Logger?.Info("Scanning finished");
                 return;
             case "Error":
-                Logger.Warning("Received global error: {Error}", messageObject.Value.GetProperty("ErrorMessage").GetString());
+                Logger?.Warn("Received global error: {Error}", messageObject.Value.GetProperty("ErrorMessage").GetString());
                 return;
             default:
-                Logger.Warning("Unhandled event: {Name}", name);
+                Logger?.Warn("Unhandled event: {Name}", name);
                 return;
         }
     }
@@ -310,7 +309,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
             return;
         }
 
-        Logger.Information("Closing connection to {Host}", Host);
+        Logger?.Info("Closing connection to {Host}", Host);
 
         if (RxThread is not null) {
             await StopDevices().ConfigureAwait(false);
@@ -337,7 +336,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
             throw new ButtbeeException(error);
         }
 
-        Logger.Information("Started scanning");
+        Logger?.Info("Started scanning");
     }
 
     public async Task StopScanning() {
@@ -346,7 +345,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
             throw new ButtbeeException(error);
         }
 
-        Logger.Information("Stopped scanning");
+        Logger?.Info("Stopped scanning");
     }
 
     public async Task StopDevices() {
@@ -355,7 +354,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
             throw new ButtbeeException(error);
         }
 
-        Logger.Information("Stopped all devices");
+        Logger?.Info("Stopped all devices");
     }
 
     public async Task RefreshDevices() {
@@ -368,16 +367,24 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
         Devices.Clear();
 
         foreach (var device in copy) {
-            Logger.Information("Device \"{Name}\" disconnected", device.DisplayName);
+            Logger?.Info("Device \"{Name}\" disconnected", device.DisplayName);
             device.IsConnected = false;
             DeviceRemoved?.Invoke(this, new ButtbeeDeviceEventArgs(device));
         }
 
         foreach (var rawDevice in msg!.Devices) {
-            var device = new ButtbeeDevice(rawDevice, this);
+            var device = new ButtbeeDevice(rawDevice, this, Logger);
             Devices[device.Id] = device;
-            Logger.Information("Device \"{Name}\" connencted", device.DisplayName);
+            Logger?.Info("Device \"{Name}\" connencted", device.DisplayName);
             DeviceAdded?.Invoke(this, new ButtbeeDeviceEventArgs(device));
+        }
+    }
+
+    public void ReplaceDevice(ButtbeeDevice srcDevice, ButtbeeDevice dstDevice) {
+        Devices[srcDevice.Id] = dstDevice;
+
+        if (!ReferenceEquals(srcDevice, dstDevice)) {
+            srcDevice.IsConnected = false;
         }
     }
 }

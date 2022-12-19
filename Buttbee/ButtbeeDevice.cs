@@ -3,12 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Buttbee.Events;
 using Buttbee.Messages;
-using Serilog;
 
 namespace Buttbee;
 
 public class ButtbeeDevice {
-    public ButtbeeDevice(ButtplugDeviceAdded device, ButtbeeClient client) {
+    public ButtbeeDevice(ButtplugDeviceAdded device, ButtbeeClient client, IButtbeeLogger? logger) {
         Id = device.DeviceIndex;
         Name = device.DeviceName;
         DisplayName = device.DeviceDisplayName ?? Name;
@@ -31,7 +30,7 @@ public class ButtbeeDevice {
         HasLinearControl = RawDevice.DeviceMessages.LinearCmd.Any();
         HasRotators = RawDevice.DeviceMessages.RotateCmd.Any();
 
-        Logger = Log.ForContext<ButtbeeDevice>().ForContext("Device", DisplayName);
+        Logger = logger?.AddContext<ButtbeeDevice>().AddContext("Device", DisplayName);
     }
 
     public uint Id { get; }
@@ -49,7 +48,7 @@ public class ButtbeeDevice {
 
     // todo: public event EventArgs<ButtplugSensorReading> SensorReadingReceived;
     public ButtplugDeviceAdded RawDevice { get; }
-    protected ILogger Logger { get; }
+    protected IButtbeeLogger? Logger { get; }
 
     public async Task<ButtplugError?> Send<T>(T message, string? name = null) where T : ButtplugMessage => (await Send<ButtplugOk, T>(message, name).ConfigureAwait(false)).Error;
 
@@ -68,7 +67,7 @@ public class ButtbeeDevice {
     }
 
     public async Task Stop() {
-        Logger.Information("Stopping...");
+        Logger?.Info("Stopping...");
         var err = await Send(new ButtplugStopDeviceCmd { DeviceIndex = Id }).ConfigureAwait(false);
 
         if (err is not null) {
@@ -88,7 +87,7 @@ public class ButtbeeDevice {
             if (actuator.ActuatorType.HasFlag(actuatorMask)) {
                 var scalarStepped = 1d / actuator.StepCount;
                 var scalarValue = Math.Round(scalar / scalarStepped) * scalarStepped;
-                Logger.ForContext("Actuator", actuator.FeatureDescriptor).Information("Setting {Actuator} to {Scalar}%", actuator.ActuatorType, scalarValue * 100);
+                Logger?.AddContext("Actuator", actuator.FeatureDescriptor).Info("Setting {Actuator} to {Scalar}%", actuator.ActuatorType, scalarValue * 100);
                 cmd.Scalars.Add(new ButtplugScalar { Index = (uint) index, Scalar = scalarValue, ActuatorType = actuator.ActuatorType });
             }
         }
@@ -111,7 +110,7 @@ public class ButtbeeDevice {
             var actuator = RawDevice.DeviceMessages.LinearCmd[index];
             var positionStepped = 1d / actuator.StepCount;
             var positionValue = Math.Round(position / positionStepped) * positionStepped;
-            Logger.ForContext("Actuator", actuator.FeatureDescriptor).Information("Setting {Actuator} to {Position} over {Duration}ms", actuator.FeatureDescriptor, positionValue, duration);
+            Logger?.AddContext("Actuator", actuator.FeatureDescriptor).Info("Setting {Actuator} to {Position} over {Duration}ms", actuator.FeatureDescriptor, positionValue, duration);
             cmd.Vectors.Add(new ButtplugVector { Index = (uint) index, Duration = duration, Position = positionValue });
         }
 
@@ -133,7 +132,7 @@ public class ButtbeeDevice {
             var actuator = RawDevice.DeviceMessages.RotateCmd[index];
             var speedStepped = 1d / actuator.StepCount;
             var speedValue = Math.Round(speed / speedStepped) * speedStepped;
-            Logger.ForContext("Actuator", actuator.FeatureDescriptor).Information("Setting {Actuator} rotation speed to {Speed} ({Clockwise})", actuator.FeatureDescriptor, speedValue, clockwise ? "clockwise" : "counter-clockwise");
+            Logger?.AddContext("Actuator", actuator.FeatureDescriptor).Info("Setting {Actuator} rotation speed to {Speed} ({Clockwise})", actuator.FeatureDescriptor, speedValue, clockwise ? "clockwise" : "counter-clockwise");
             cmd.Rotations.Add(new ButtplugRotation { Index = (uint) index, Speed = speedValue, Clockwise = clockwise });
         }
 
