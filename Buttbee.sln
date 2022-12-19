@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buttbee", "Buttbee\Buttbee.csproj", "{12A98CF9-0563-471B-8FDA-E499A20371E0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{E491E97C-DE62-47DA-9246-73CAA52C6324}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binary", "Examples\Binary\Binary.csproj", "{8A0C85DC-F50A-433A-82ED-046E3CC2E0AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Connect", "Examples\Connect\Connect.csproj", "{42709122-54E0-451E-84AF-AD8285AC7884}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{12A98CF9-0563-471B-8FDA-E499A20371E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12A98CF9-0563-471B-8FDA-E499A20371E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12A98CF9-0563-471B-8FDA-E499A20371E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12A98CF9-0563-471B-8FDA-E499A20371E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A0C85DC-F50A-433A-82ED-046E3CC2E0AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A0C85DC-F50A-433A-82ED-046E3CC2E0AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A0C85DC-F50A-433A-82ED-046E3CC2E0AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A0C85DC-F50A-433A-82ED-046E3CC2E0AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42709122-54E0-451E-84AF-AD8285AC7884}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42709122-54E0-451E-84AF-AD8285AC7884}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42709122-54E0-451E-84AF-AD8285AC7884}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42709122-54E0-451E-84AF-AD8285AC7884}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8A0C85DC-F50A-433A-82ED-046E3CC2E0AA} = {E491E97C-DE62-47DA-9246-73CAA52C6324}
+		{42709122-54E0-451E-84AF-AD8285AC7884} = {E491E97C-DE62-47DA-9246-73CAA52C6324}
+	EndGlobalSection
+EndGlobal
