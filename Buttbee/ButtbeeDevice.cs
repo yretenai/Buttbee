@@ -71,7 +71,7 @@ public class ButtbeeDevice {
         Logger.Information("Stopping...");
         var err = await Send(new ButtplugStopDeviceCmd { DeviceIndex = Id }).ConfigureAwait(false);
 
-        if (err != null) {
+        if (err is not null) {
             throw new ButtbeeException(err);
         }
     }
@@ -95,7 +95,7 @@ public class ButtbeeDevice {
 
         var err = await Send(cmd).ConfigureAwait(false);
 
-        if (err != null) {
+        if (err is not null) {
             throw new ButtbeeException(err);
         }
     }
@@ -114,7 +114,7 @@ public class ButtbeeDevice {
 
         var err = await Send(cmd).ConfigureAwait(false);
 
-        if (err != null) {
+        if (err is not null) {
             throw new ButtbeeException(err);
         }
     }
@@ -133,7 +133,7 @@ public class ButtbeeDevice {
 
         var err = await Send(cmd).ConfigureAwait(false);
 
-        if (err != null) {
+        if (err is not null) {
             throw new ButtbeeException(err);
         }
     }

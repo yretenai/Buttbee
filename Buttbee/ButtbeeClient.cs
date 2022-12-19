@@ -131,7 +131,7 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
                 tcs.SetResult((null, msg.Data.Deserialize<ButtplugError>(), msg));
             } else {
                 var data = msg.Data.Deserialize<TRx>();
-                if (data == null) {
+                if (data is null) {
                     tcs.SetResult((null, new ButtplugError { ErrorMessage = "Invalid message type", ErrorCode = ButtplugErrorCode.ButtbeeError }, msg));
                 } else {
                     tcs.SetResult((data, null, msg));

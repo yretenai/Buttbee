@@ -70,7 +70,7 @@ internal static class Program {
                 }
 
                 // If the bit is set, vibrate the device at 33% intensity.
-                await device.Scalar(ButtplugDeviceActuatorType.Vibrate, (@byte & i) != 0 ? 0.33f : 0).ConfigureAwait(true);
+                await device.Scalar(ButtplugDeviceActuatorType.Vibrate, (@byte & i) is not 0 ? 0.33f : 0).ConfigureAwait(true);
 
                 // wait for 300ms
                 await Task.Delay(300, cts.Token).ConfigureAwait(true);
