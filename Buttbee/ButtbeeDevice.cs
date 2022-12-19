@@ -88,7 +88,7 @@ public class ButtbeeDevice {
             if (actuator.ActuatorType.HasFlag(actuatorMask)) {
                 var scalarStepped = 1d / actuator.StepCount;
                 var scalarValue = Math.Round(scalar / scalarStepped) * scalarStepped;
-                Logger.Information("Setting {Actuator} to {Scalar}%", actuator.ActuatorType, scalarValue * 100);
+                Logger.ForContext("Actuator", actuator.FeatureDescriptor).Information("Setting {Actuator} to {Scalar}%", actuator.ActuatorType, scalarValue * 100);
                 cmd.Scalars.Add(new ButtplugScalar { Index = (uint) index, Scalar = scalarValue, ActuatorType = actuator.ActuatorType });
             }
         }
@@ -108,8 +108,11 @@ public class ButtbeeDevice {
         var cmd = new ButtplugLinearCmd { DeviceIndex = Id };
 
         for (var index = 0; index < RawDevice.DeviceMessages.LinearCmd.Count; index++) {
-            Logger.Information("Setting linear position to {Position} over {Duration}ms", position, duration);
-            cmd.Vectors.Add(new ButtplugVector { Index = (uint) index, Duration = duration, Position = position });
+            var actuator = RawDevice.DeviceMessages.LinearCmd[index];
+            var positionStepped = 1d / actuator.StepCount;
+            var positionValue = Math.Round(position / positionStepped) * positionStepped;
+            Logger.ForContext("Actuator", actuator.FeatureDescriptor).Information("Setting {Actuator} to {Position} over {Duration}ms", actuator.FeatureDescriptor, positionValue, duration);
+            cmd.Vectors.Add(new ButtplugVector { Index = (uint) index, Duration = duration, Position = positionValue });
         }
 
         var err = await Send(cmd).ConfigureAwait(false);
@@ -126,9 +129,12 @@ public class ButtbeeDevice {
 
         var cmd = new ButtplugRotateCmd { DeviceIndex = Id };
 
-        for (var index = 0; index < RawDevice.DeviceMessages.LinearCmd.Count; index++) {
-            Logger.Information("Setting rotation speed to {Speed} ({Clockwise})", speed, clockwise ? "clockwise" : "counter-clockwise");
-            cmd.Rotations.Add(new ButtplugRotation { Index = (uint) index, Speed = speed, Clockwise = clockwise });
+        for (var index = 0; index < RawDevice.DeviceMessages.RotateCmd.Count; index++) {
+            var actuator = RawDevice.DeviceMessages.RotateCmd[index];
+            var speedStepped = 1d / actuator.StepCount;
+            var speedValue = Math.Round(speed / speedStepped) * speedStepped;
+            Logger.ForContext("Actuator", actuator.FeatureDescriptor).Information("Setting {Actuator} rotation speed to {Speed} ({Clockwise})", actuator.FeatureDescriptor, speedValue, clockwise ? "clockwise" : "counter-clockwise");
+            cmd.Rotations.Add(new ButtplugRotation { Index = (uint) index, Speed = speedValue, Clockwise = clockwise });
         }
 
         var err = await Send(cmd).ConfigureAwait(false);
