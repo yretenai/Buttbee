@@ -2,8 +2,7 @@
 
 namespace Buttbee.Messages;
 
-public record ButtplugScalar {
-    public uint Index { get; init; }
+public record ButtplugScalar : ButtplugActuator {
     public double Scalar { get; set; }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

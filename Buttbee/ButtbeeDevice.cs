@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Buttbee.Attributes;
+using Buttbee.Builders;
 using Buttbee.Events;
 using Buttbee.Messages;
 
@@ -15,20 +19,41 @@ public class ButtbeeDevice {
         Client = client;
         IsConnected = true;
         RawDevice = device;
-        foreach (var scalar in device.DeviceMessages.ScalarCmd) {
+        for (var index = 0; index < device.DeviceMessages.ScalarCmd.Count; index++) {
+            var scalar = device.DeviceMessages.ScalarCmd[index];
             if (!Capabilties.HasFlag(scalar.ActuatorType)) {
                 Capabilties |= scalar.ActuatorType;
             }
+
+            ScalarActuators.Add(new ButtbeeScalarActuator(this, (uint) index, scalar));
         }
 
-        foreach (var sensor in device.DeviceMessages.SensorReadCmd) {
-            if (!Sensors.HasFlag(sensor.SensorType)) {
-                Sensors |= sensor.SensorType;
+        for (var index = 0; index < device.DeviceMessages.LinearCmd.Count; index++) {
+            var linear = device.DeviceMessages.LinearCmd[index];
+            if (!Capabilties.HasFlag(linear.ActuatorType)) {
+                Capabilties |= linear.ActuatorType;
             }
+
+            LinearActuators.Add(new ButtbeeLinearActuator(this, (uint) index, linear));
         }
 
-        HasLinearControl = RawDevice.DeviceMessages.LinearCmd.Any();
-        HasRotators = RawDevice.DeviceMessages.RotateCmd.Any();
+        for (var index = 0; index < device.DeviceMessages.RotateCmd.Count; index++) {
+            var rotator = device.DeviceMessages.RotateCmd[index];
+            if (!Capabilties.HasFlag(rotator.ActuatorType)) {
+                Capabilties |= rotator.ActuatorType;
+            }
+
+            RotatorActuators.Add(new ButtbeeRotatorActuator(this, (uint) index, rotator));
+        }
+
+        for (var index = 0; index < device.DeviceMessages.SensorReadCmd.Count; index++) {
+            var sensor = device.DeviceMessages.SensorReadCmd[index];
+            if (!SensorCapabilities.HasFlag(sensor.SensorType)) {
+                SensorCapabilities |= sensor.SensorType;
+            }
+
+            Sensors.Add(new ButtbeeDeviceSensor(this, (uint) index, sensor));
+        }
 
         Logger = logger?.AddContext<ButtbeeDevice>().AddContext("Device", DisplayName);
     }
@@ -39,27 +64,45 @@ public class ButtbeeDevice {
     public uint Delay { get; }
     public DateTimeOffset CanSendNextMessageAt { get; private set; }
     public ButtplugDeviceActuatorType Capabilties { get; }
-    public ButtplugDeviceSensorType Sensors { get; }
-    public bool HasRotators { get; }
-    public bool HasLinearControl { get; }
+    public ButtplugDeviceSensorType SensorCapabilities { get; }
     public bool IsConnected { get; internal set; }
 
     public ButtbeeClient Client { get; }
 
-    // todo: public event EventArgs<ButtplugSensorReading> SensorReadingReceived;
     public ButtplugDeviceAdded RawDevice { get; }
     protected IButtbeeLogger? Logger { get; }
 
-    public async Task<ButtplugError?> Send<T>(T message, string? name = null) where T : ButtplugMessage => (await Send<ButtplugOk, T>(message, name).ConfigureAwait(false)).Error;
+    public List<ButtbeeScalarActuator> ScalarActuators { get; } = new();
+    public List<ButtbeeLinearActuator> LinearActuators { get; } = new();
+    public List<ButtbeeRotatorActuator> RotatorActuators { get; } = new();
+    public List<ButtbeeDeviceSensor> Sensors { get; } = new();
 
-    public async Task<(TRx? Message, ButtplugError? Error, ButtbeeMessageEventArgs RawMessage)> Send<TRx, TTx>(TTx message, string? name = null) where TRx : ButtplugMessage where TTx : ButtplugMessage {
+    public async Task<ButtplugError?> Send<T>(T message, string? name = null, CancellationToken cancellationToken = default) where T : ButtplugDeviceMessage => (await Send<ButtplugOk, T>(message, name, cancellationToken).ConfigureAwait(false)).Error;
+
+    public async Task<(TRx? Message, ButtplugError? Error, ButtbeeMessageEventArgs RawMessage)> Send<TRx, TTx>(TTx message, string? name = null, CancellationToken cancellationToken = default) where TRx : ButtplugMessage where TTx : ButtplugDeviceMessage {
         if (!IsConnected) {
             throw new ButtbeeException("Device is not connected");
         }
 
         if (CanSendNextMessageAt > DateTimeOffset.Now) {
-            await Task.Delay(CanSendNextMessageAt - DateTimeOffset.Now).ConfigureAwait(false);
+            await Task.Delay(CanSendNextMessageAt - DateTimeOffset.Now, cancellationToken).ConfigureAwait(false);
         }
+
+        message.DeviceIndex = Id;
+
+        var resp = await Client.Send<TRx, TTx>(message, name).ConfigureAwait(false);
+        CanSendNextMessageAt = DateTimeOffset.Now.AddMilliseconds(Delay);
+        return resp;
+    }
+
+    public async Task<ButtplugError?> SendImmediate<T>(T message, string? name = null) where T : ButtplugDeviceMessage => (await SendImmediate<ButtplugOk, T>(message, name).ConfigureAwait(false)).Error;
+
+    public async Task<(TRx? Message, ButtplugError? Error, ButtbeeMessageEventArgs RawMessage)> SendImmediate<TRx, TTx>(TTx message, string? name = null) where TRx : ButtplugMessage where TTx : ButtplugDeviceMessage {
+        if (!IsConnected) {
+            throw new ButtbeeException("Device is not connected");
+        }
+
+        message.DeviceIndex = Id;
 
         var resp = await Client.Send<TRx, TTx>(message, name).ConfigureAwait(false);
         CanSendNextMessageAt = DateTimeOffset.Now.AddMilliseconds(Delay);
@@ -68,7 +111,7 @@ public class ButtbeeDevice {
 
     public async Task Stop() {
         Logger?.Info("Stopping...");
-        var err = await Send(new ButtplugStopDeviceCmd { DeviceIndex = Id }).ConfigureAwait(false);
+        var err = await SendImmediate(new ButtplugStopDeviceCmd()).ConfigureAwait(false);
 
         if (err is not null) {
             throw new ButtbeeException(err);
@@ -80,7 +123,7 @@ public class ButtbeeDevice {
             return;
         }
 
-        var cmd = new ButtplugScalarCmd { DeviceIndex = Id };
+        var cmd = new ButtplugScalarCmd();
 
         for (var index = 0; index < RawDevice.DeviceMessages.ScalarCmd.Count; index++) {
             var actuator = RawDevice.DeviceMessages.ScalarCmd[index];
@@ -100,11 +143,11 @@ public class ButtbeeDevice {
     }
 
     public async Task Linear(uint duration, double position) {
-        if (!HasLinearControl) {
+        if (!LinearActuators.Any()) {
             return;
         }
 
-        var cmd = new ButtplugLinearCmd { DeviceIndex = Id };
+        var cmd = new ButtplugLinearCmd();
 
         for (var index = 0; index < RawDevice.DeviceMessages.LinearCmd.Count; index++) {
             var actuator = RawDevice.DeviceMessages.LinearCmd[index];
@@ -121,12 +164,16 @@ public class ButtbeeDevice {
         }
     }
 
+    public async Task Linear(TimeSpan duration, double position) {
+        await Linear((uint) duration.TotalMilliseconds, position).ConfigureAwait(false);
+    }
+
     public async Task Rotate(double speed, bool clockwise) {
-        if (!HasLinearControl) {
+        if (!RotatorActuators.Any()) {
             return;
         }
 
-        var cmd = new ButtplugRotateCmd { DeviceIndex = Id };
+        var cmd = new ButtplugRotateCmd();
 
         for (var index = 0; index < RawDevice.DeviceMessages.RotateCmd.Count; index++) {
             var actuator = RawDevice.DeviceMessages.RotateCmd[index];
@@ -143,6 +190,19 @@ public class ButtbeeDevice {
         }
     }
 
-    // todo: sensors
-    // todo: individual actuator control
+    internal void BroadcastSensorData(ButtplugSensorReading reading) {
+        foreach (var sensor in Sensors) {
+            if (sensor.Type == reading.SensorType && sensor.Id == reading.SensorIndex) {
+                sensor.Update(reading.Data);
+            }
+        }
+    }
+
+    public ButtbeeScalarBuilder WithScalarBuilder() => new(this);
+
+    public ButtbeeLinearBuilder WithLinearBuilder() => new(this);
+
+    public ButtbeeRotatorBuilder WithRotatorBuilder() => new(this);
+
+    // todo: raw message pub/sub
 }

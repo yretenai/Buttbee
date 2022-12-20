@@ -60,6 +60,18 @@ internal static class Program {
             return;
         }
 
+        // subscribe to battery events
+        var batterySensor = device.Sensors.FirstOrDefault(x => x.Type == ButtplugDeviceSensorType.Battery);
+        if (batterySensor is not null) {
+            batterySensor.ValueChanged += (_, sensor) => {
+                var batteryAbsolute = sensor.Values[0] + sensor.Sensor.Ranges[0].Start.Value;
+                var batteryPercentage = (int) Math.Round(batteryAbsolute / (double) sensor.Sensor.Ranges[0].End.Value * 100d);
+                Log.Information("{Device} is at {BatteryLevel}%", sensor.Sensor.Name, batteryPercentage);
+            };
+
+            await batterySensor.Poll();
+        }
+
         // Get the bytes for the message to send via vibrations
         var bytes = Encoding.ASCII.GetBytes(args.FirstOrDefault() ?? "Hello, buttplug!");
         foreach (var @byte in bytes) {
@@ -85,9 +97,7 @@ internal static class Program {
 
 [SuppressMessage("ReSharper", "TemplateIsNotCompileTimeConstantProblem")]
 internal class SerilogWrapper : IButtbeeLogger {
-    internal SerilogWrapper(ILogger logger) {
-        Logger = logger;
-    }
+    internal SerilogWrapper(ILogger logger) => Logger = logger;
 
     private ILogger Logger { get; }
 
@@ -115,12 +125,9 @@ internal class SerilogWrapper : IButtbeeLogger {
         Logger.Debug(e, message, values);
     }
 
-    public IButtbeeLogger AddContext(string key, string? value) {
-        return new SerilogWrapper(Logger.ForContext(key, value));
-    }
+    public IButtbeeLogger AddContext(string key, string? value) => new SerilogWrapper(Logger.ForContext(key, value));
 
-    public IButtbeeLogger AddContext<T>() {
+    public IButtbeeLogger AddContext<T>() =>
         // ReSharper disable once ContextualLoggerProblem
-        return new SerilogWrapper(Logger.ForContext<T>());
-    }
+        new SerilogWrapper(Logger.ForContext<T>());
 }

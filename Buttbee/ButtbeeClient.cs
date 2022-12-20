@@ -249,6 +249,21 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
     protected virtual void RxEvent(string name, JsonProperty messageObject) {
         // publish announce message
         switch (name) {
+            case "SensorReading": {
+                var rawSensorReading = messageObject.Value.Deserialize<ButtplugSensorReading>();
+                if (rawSensorReading is null) {
+                    Logger?.Error("Failed to deserialize sensor reading");
+                    return;
+                }
+
+                if (!Devices.TryGetValue(rawSensorReading.DeviceIndex, out var device)) {
+                    Logger?.Error("Received sensor reading for unknown device {DeviceIndex}", rawSensorReading.DeviceIndex);
+                    return;
+                }
+
+                device.BroadcastSensorData(rawSensorReading);
+                return;
+            }
             case "DeviceAdded": {
                 var rawDevice = messageObject.Value.Deserialize<ButtplugDeviceAdded>();
                 if (rawDevice is null) {

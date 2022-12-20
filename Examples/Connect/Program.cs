@@ -35,9 +35,7 @@ internal static class Program {
 
 [SuppressMessage("ReSharper", "TemplateIsNotCompileTimeConstantProblem")]
 internal class SerilogWrapper : IButtbeeLogger {
-    internal SerilogWrapper(ILogger logger) {
-        Logger = logger;
-    }
+    internal SerilogWrapper(ILogger logger) => Logger = logger;
 
     private ILogger Logger { get; }
 
@@ -65,12 +63,9 @@ internal class SerilogWrapper : IButtbeeLogger {
         Logger.Debug(e, message, values);
     }
 
-    public IButtbeeLogger AddContext(string key, string? value) {
-        return new SerilogWrapper(Logger.ForContext(key, value));
-    }
+    public IButtbeeLogger AddContext(string key, string? value) => new SerilogWrapper(Logger.ForContext(key, value));
 
-    public IButtbeeLogger AddContext<T>() {
+    public IButtbeeLogger AddContext<T>() =>
         // ReSharper disable once ContextualLoggerProblem
-        return new SerilogWrapper(Logger.ForContext<T>());
-    }
+        new SerilogWrapper(Logger.ForContext<T>());
 }
