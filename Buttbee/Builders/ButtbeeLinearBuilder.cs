@@ -59,17 +59,17 @@ public class ButtbeeLinearBuilder {
         public ButtbeeLinearActuator Linear { get; }
         public ButtplugVector Data { get; }
 
-        public Node SetPosition(double value) {
+        public Node Position(double value) {
             Data.Position = Linear.CalculateSteps(value);
             return this;
         }
 
-        public Node SetDuration(uint value) {
+        public Node Duration(uint value) {
             Data.Duration = value;
             return this;
         }
 
-        public Node SetDuration(TimeSpan value) {
+        public Node Duration(TimeSpan value) {
             Data.Duration = (uint) value.TotalMilliseconds;
             return this;
         }

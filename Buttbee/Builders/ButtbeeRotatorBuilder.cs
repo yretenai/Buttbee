@@ -58,7 +58,7 @@ public class ButtbeeRotatorBuilder {
         public ButtbeeRotatorActuator Rotator { get; }
         public ButtplugRotation Data { get; }
 
-        public Node SetSpeed(double value) {
+        public Node Speed(double value) {
             Data.Speed = Rotator.CalculateSteps(value);
             return this;
         }

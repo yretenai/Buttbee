@@ -58,7 +58,7 @@ public class ButtbeeScalarBuilder {
         public ButtbeeScalarActuator Scalar { get; }
         public ButtplugScalar Data { get; }
 
-        public Node SetValue(double value) {
+        public Node Value(double value) {
             Data.Scalar = Scalar.CalculateSteps(value);
             return this;
         }
