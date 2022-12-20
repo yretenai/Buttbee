@@ -23,6 +23,6 @@ public class ButtbeeLinearActuator : ButtbeeDeviceActuator {
         Position = CalculateSteps(position);
         Duration = duration;
         CanSendNextMessageAt = DateTimeOffset.Now.AddMilliseconds(Device.Delay);
-        await Device.SendImmediate(new ButtplugLinearCmd { DeviceIndex = Device.Id, Vectors = { new ButtplugVector { Index = Id, Position = position, Duration = duration } } });
+        await Device.SendImmediate(new ButtplugLinearCmd { DeviceIndex = Device.Id, Vectors = { new ButtplugVector { Index = Id, Position = position, Duration = duration } } }).ConfigureAwait(false);
     }
 }

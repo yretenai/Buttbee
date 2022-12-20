@@ -23,6 +23,6 @@ public class ButtbeeRotatorActuator : ButtbeeDeviceActuator {
         Speed = CalculateSteps(speed);
         Clockwise = clockwise;
         CanSendNextMessageAt = DateTimeOffset.Now.AddMilliseconds(Device.Delay);
-        await Device.SendImmediate(new ButtplugRotateCmd { DeviceIndex = Device.Id, Rotations = { new ButtplugRotation { Index = Id, Speed = speed, Clockwise = clockwise } } });
+        await Device.SendImmediate(new ButtplugRotateCmd { DeviceIndex = Device.Id, Rotations = { new ButtplugRotation { Index = Id, Speed = speed, Clockwise = clockwise } } }).ConfigureAwait(false);
     }
 }

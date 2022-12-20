@@ -40,7 +40,7 @@ public class ButtbeeDeviceSensor : ButtbeeDeviceAttribute {
     }
 
     public async Task<int[]> Poll() {
-        var (msg, err, _) = await Device.SendImmediate<ButtplugSensorReading, ButtplugSensorReadCmd>(new ButtplugSensorReadCmd { SensorIndex = Id, SensorType = Type });
+        var (msg, err, _) = await Device.SendImmediate<ButtplugSensorReading, ButtplugSensorReadCmd>(new ButtplugSensorReadCmd { SensorIndex = Id, SensorType = Type }).ConfigureAwait(false);
         if (err is not null) {
             throw new ButtbeeException(err);
         }
@@ -51,10 +51,10 @@ public class ButtbeeDeviceSensor : ButtbeeDeviceAttribute {
     }
 
     public async Task Subscribe() {
-        await Device.SendImmediate(new ButtplugSensorSubscribeCmd { SensorIndex = Id, SensorType = Type });
+        await Device.SendImmediate(new ButtplugSensorSubscribeCmd { SensorIndex = Id, SensorType = Type }).ConfigureAwait(false);
     }
 
     public async Task Unsubscribe() {
-        await Device.SendImmediate(new ButtplugSensorUnsubscribeCmd { SensorIndex = Id, SensorType = Type });
+        await Device.SendImmediate(new ButtplugSensorUnsubscribeCmd { SensorIndex = Id, SensorType = Type }).ConfigureAwait(false);
     }
 }

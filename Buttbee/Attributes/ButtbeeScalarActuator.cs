@@ -25,6 +25,6 @@ public class ButtbeeScalarActuator : ButtbeeDeviceActuator {
 
         Value = CalculateSteps(value);
         CanSendNextMessageAt = DateTimeOffset.Now.AddMilliseconds(Device.Delay);
-        await Device.SendImmediate(new ButtplugScalarCmd { DeviceIndex = Device.Id, Scalars = { new ButtplugScalar { Index = Id, Scalar = value, ActuatorType = Type } } });
+        await Device.SendImmediate(new ButtplugScalarCmd { DeviceIndex = Device.Id, Scalars = { new ButtplugScalar { Index = Id, Scalar = value, ActuatorType = Type } } }).ConfigureAwait(false);
     }
 }

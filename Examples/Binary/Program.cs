@@ -69,7 +69,7 @@ internal static class Program {
                 Log.Information("{Device} is at {BatteryLevel}%", sensor.Sensor.Name, batteryPercentage);
             };
 
-            await batterySensor.Poll();
+            await batterySensor.Poll().ConfigureAwait(true);
         }
 
         // Get the bytes for the message to send via vibrations

@@ -6,6 +6,7 @@
         <LangVersion>preview</LangVersion>
         <RootNamespace>ButtBee.Examples.Binary</RootNamespace>
         <Nullable>enable</Nullable>
+        <NoWarn>CA1506</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
