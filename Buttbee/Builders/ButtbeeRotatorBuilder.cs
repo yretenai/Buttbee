@@ -17,7 +17,7 @@ public class ButtbeeRotatorBuilder {
     public ButtbeeDevice Device { get; }
     public DateTimeOffset CanSendNextMessageAt { get; internal set; }
 
-    public Node CreateNode(string name) {
+    public Node Add(string name) {
         var rotator = Device.RotatorActuators.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (rotator == null) {
             throw new Exception($"Rotator {name} not found on device {Device.Name}");
@@ -26,7 +26,7 @@ public class ButtbeeRotatorBuilder {
         return new Node(this, rotator);
     }
 
-    public Node CreateNode(uint index) {
+    public Node Add(uint index) {
         if (index > (uint) Device.RotatorActuators.Count) {
             throw new Exception($"Rotator index {index} not found on device {Device.Name}");
         }

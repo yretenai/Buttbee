@@ -17,7 +17,7 @@ public class ButtbeeLinearBuilder {
     public ButtbeeDevice Device { get; }
     public DateTimeOffset CanSendNextMessageAt { get; internal set; }
 
-    public Node CreateNode(string name) {
+    public Node Add(string name) {
         var linear = Device.LinearActuators.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (linear == null) {
             throw new Exception($"Linear {name} not found on device {Device.Name}");
@@ -26,7 +26,7 @@ public class ButtbeeLinearBuilder {
         return new Node(this, linear);
     }
 
-    public Node CreateNode(uint index) {
+    public Node Add(uint index) {
         if (index > (uint) Device.LinearActuators.Count) {
             throw new Exception($"Linear index {index} not found on device {Device.Name}");
         }

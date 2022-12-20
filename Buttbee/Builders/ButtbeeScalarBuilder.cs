@@ -17,7 +17,7 @@ public class ButtbeeScalarBuilder {
     public ButtbeeDevice Device { get; }
     public DateTimeOffset CanSendNextMessageAt { get; internal set; }
 
-    public Node CreateNode(string scalarName) {
+    public Node Add(string scalarName) {
         var scalar = Device.ScalarActuators.FirstOrDefault(x => x.Name.Equals(scalarName, StringComparison.OrdinalIgnoreCase));
         if (scalar == null) {
             throw new Exception($"Scalar {scalarName} not found on device {Device.Name}");
@@ -26,7 +26,7 @@ public class ButtbeeScalarBuilder {
         return new Node(this, scalar);
     }
 
-    public Node CreateNode(uint index) {
+    public Node Add(uint index) {
         if (index > (uint) Device.ScalarActuators.Count) {
             throw new Exception($"Scalar index {index} not found on device {Device.Name}");
         }
