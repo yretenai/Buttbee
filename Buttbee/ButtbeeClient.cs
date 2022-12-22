@@ -190,8 +190,10 @@ public class ButtbeeClient : IDisposable, IAsyncDisposable {
                 }
 
                 if (!result.EndOfMessage) {
-                    fullBuffer = new byte[result.Count + result.Count];
-                    Array.Copy(buffer, 0, fullBuffer, 0, result.Count);
+                    var tmp = new byte[fullBuffer.Length + result.Count];
+                    Array.Copy(fullBuffer, 0, tmp, 0, fullBuffer.Length);
+                    Array.Copy(buffer, 0, tmp, fullBuffer.Length, result.Count);
+                    fullBuffer = tmp;
                     continue;
                 }
 
